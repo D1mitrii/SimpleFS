@@ -42,7 +42,8 @@ sudo mount -t simplefs $DEVICE /mnt/simplefs
 ls -la /mnt/simplefs
 ```
 
-Использование утилиты CLI
+## Использование утилиты CLI
+
 Проверка чтения/записи
 ```bash
 ./simplefs_cli /mnt/simplefs test
