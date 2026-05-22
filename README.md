@@ -43,10 +43,6 @@ ls -la /mnt/simplefs
 ```
 
 Использование утилиты CLI
-```bash
-./simplefs_cli /mnt/simplefs <cmd>
-```
-
 Проверка чтения/записи
 ```bash
 ./simplefs_cli /mnt/simplefs test
