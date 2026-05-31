@@ -29,7 +29,7 @@ sudo insmod simplefs.ko device_name="$DEVICE" \
     max_file_sectors=16
 ```
 
-Смонтировать файловую систему
+Смонтировать файловую систему с форматированием (все сектора файлов будут занулены)
 
 ```bash
 sudo mkdir -p /mnt/simplefs
