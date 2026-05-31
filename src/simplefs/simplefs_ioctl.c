@@ -37,11 +37,6 @@ static int erase_ioctl(struct super_block *sb)
 {
     struct simplefs_info* fsi = sb->s_fs_info;
     struct buffer_head *bh;
-    int ret;
-
-    ret = zero_ioctl(sb);
-    if (ret)
-        return ret;
 
     bh = sb_bread(sb, fsi->main_sb);
     if (bh) {
@@ -58,6 +53,11 @@ static int erase_ioctl(struct super_block *sb)
         sync_dirty_buffer(bh);
         brelse(bh);
     }
+
+    sb->s_flags |= SB_RDONLY;
+    fsi->erased = true;
+
+    printk(KERN_INFO "SimpleFS: erased, requires unmount and mount to become usable again\n");
 
     return 0;
 }
@@ -163,9 +163,15 @@ long ioctl_handler(struct file *file, unsigned int cmd, unsigned long arg)
 {
     struct inode* inode = file_inode(file);
     struct super_block* sb = inode->i_sb;
+    struct simplefs_info* fsi = get_simplefs_info(sb);
     void __user *argp = (void __user *)arg;
     
     printk(KERN_INFO "SimpleFS: ioctl_handler: cmd=%u\n", cmd);
+
+    if (fsi->erased) {
+        printk(KERN_INFO "SimpleFS: erased, ioctl operation rejected\n");
+        return -EIO;
+    }
     
     switch (cmd) {
         case SIMPLEFS_IOCTL_ZERO:

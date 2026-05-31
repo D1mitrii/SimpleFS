@@ -89,6 +89,9 @@ static int dir_iterate(struct file* filep, struct dir_context* context)
     
     if (!dir_emit_dots(filep, context))
         return 0;
+    
+    if (fsi->erased)
+        return 0;
 
     u32 idx = context->pos - 2;
     while (idx < fsi->file_count) {
@@ -114,6 +117,10 @@ static const struct file_operations dir_ops = {
 
 int lookup_filename(const struct simplefs_info* fsi, const char* name, size_t len)
 {
+    if (fsi->erased) {
+        return -ENOENT;
+    }
+
     char generated[FILE_MAX_NAME];
     
     for (u32 i = 0; i < fsi->file_count; i++) {
@@ -156,6 +163,10 @@ static ssize_t file_read(struct file* filp, char __user* buf, size_t len, loff_t
     struct simplefs_info* fsi = get_simplefs_info(sb);
     loff_t pos = *offset;
     size_t copied = 0;
+
+    if (fsi->erased) {
+        return -EIO;
+    }
     
     u32 file_idx = inode->i_ino - SIMPLEFS_FIRST_FILE_INO;
     
@@ -204,6 +215,10 @@ static ssize_t file_write(struct file *filp, const char __user *buf, size_t len,
     loff_t pos = *offset;
     size_t written = 0;
     
+    if (fsi->erased) {
+        return -EIO;
+    }
+
     u32 file_idx = inode->i_ino - SIMPLEFS_FIRST_FILE_INO;
     
     loff_t file_max_size = fsi->file_sectors  * sb->s_blocksize;

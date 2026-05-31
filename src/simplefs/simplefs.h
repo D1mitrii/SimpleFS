@@ -38,6 +38,8 @@ struct simplefs_info {
     u32 file_sectors;
     u32 file_count;
     u32 filename_width;
+
+    bool erased;
 };
 
 struct simplefs_info* get_simplefs_info(const struct super_block*);
