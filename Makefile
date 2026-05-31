@@ -1,5 +1,5 @@
 obj-m := simplefs.o
-simplefs-y := src/simplefs/simplefs.o src/simplefs/simplefs_ioctl.o
+simplefs-y := src/simplefs/simplefs.o src/simplefs/simplefs_ioctl.o src/simplefs/mount_ops.o
 
 PWD := $(shell pwd)
 

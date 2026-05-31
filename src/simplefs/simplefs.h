@@ -14,6 +14,10 @@
 #define FILE_MAX_NAME 255
 #define FILE_PREFIX "file"
 
+struct simplefs_mount_opts {
+    bool format;
+};
+
 struct simplefs_superblock {
     __le32 magic;
     __le32 version;
@@ -40,6 +44,7 @@ struct simplefs_info {
     u32 filename_width;
 
     bool erased;
+    struct simplefs_mount_opts mops;
 };
 
 struct simplefs_info* get_simplefs_info(const struct super_block*);
@@ -48,5 +53,8 @@ void format_filename(const struct simplefs_info*, u32, char*, size_t);
 int lookup_filename(const struct simplefs_info*, const char*, size_t);
 int clear_sector(struct super_block*, sector_t);
 int zero_all_files(struct super_block*);
+
+int parse_mount_ops(char*, struct simplefs_mount_opts*);
+void show_ops(struct seq_file*, struct simplefs_mount_opts);
 
 #endif

@@ -503,6 +503,17 @@ static int init_super(struct super_block* sb, struct simplefs_info* fsi)
         ret = -EIO;
         goto out;
     }
+
+    if (fsi->mops.format) {
+        printk(KERN_INFO "SimpleFS: format & create new FS\n");
+        init_layout(sb, fsi);
+        ret = write_superblocks(sb, fsi);
+        if (ret)
+            goto out;
+        zero_all_files(sb);
+        ret = 0;
+        goto out;
+    }
     
     struct simplefs_superblock* primary = (void *)bh1->b_data;
     struct simplefs_superblock* backup = (void *)bh2->b_data;
@@ -527,12 +538,10 @@ static int init_super(struct super_block* sb, struct simplefs_info* fsi)
         if (ret)
             goto out;
     } else {
-        printk(KERN_INFO "SimpleFS: creating new FS\n");
-        init_layout(sb, fsi);
-        ret = write_superblocks(sb, fsi);
-        if (ret)
-            goto out;
-        zero_all_files(sb);
+        printk(KERN_ERR "SimpleFS: both superblocks on disk invalid\n");
+        printk(KERN_INFO "SimpleFS: use mount with '-o format' to init clean SimpleFS instance (WARNING: ALL SECTORS WILL BE ZEROED)");
+        ret = -EUCLEAN;
+        goto out;
     }
     
 out:
@@ -541,13 +550,27 @@ out:
     return ret;
 }
 
+static int simplefs_show_options(struct seq_file* seq, struct dentry* dir) {
+    struct simplefs_info* fsi = get_simplefs_info(dir->d_sb);
+    show_ops(seq, fsi->mops);
+    return 0;
+}
+
 static const struct super_operations super_ops = {
     .put_super = put_simplefs_super,
+    .show_options = simplefs_show_options,
 };
 
 static int simplefs_fill_super(struct super_block* sb, void* data, int silent)
 {
     int ret;
+    struct simplefs_mount_opts ops = {0};
+
+    ret = parse_mount_ops((char*) data, &ops);
+    if (ret) {
+        printk(KERN_ERR "SimpleFS: parse mount ops failed\n");
+        return ret;
+    }
 
     if (sb_main_sector == sb_backup_sector || max_file_sectors < 1 || max_filename_len > FILE_MAX_NAME)
 		return -EINVAL;
@@ -571,6 +594,7 @@ static int simplefs_fill_super(struct super_block* sb, void* data, int silent)
     fsi->backup_sb = sb_backup_sector;
     fsi->max_filename_len = max_filename_len;
     fsi->file_sectors = max_file_sectors;
+    fsi->mops = ops;
 
     if (fsi->main_sb == fsi->backup_sb) {
         kfree(fsi);

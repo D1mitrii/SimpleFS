@@ -33,6 +33,12 @@ sudo insmod simplefs.ko device_name="$DEVICE" \
 
 ```bash
 sudo mkdir -p /mnt/simplefs
+sudo mount -t simplefs $DEVICE /mnt/simplefs -o format
+```
+
+Смонтировать файловую систему
+```bash
+sudo mkdir -p /mnt/simplefs
 sudo mount -t simplefs $DEVICE /mnt/simplefs
 ```
 
