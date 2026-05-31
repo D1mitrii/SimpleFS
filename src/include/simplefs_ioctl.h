@@ -6,6 +6,7 @@
 
 struct metadata_query {
     __u64 entries_ptr;
+    __u32 offset;
     __u32 capacity;
     __u32 count;
 };
@@ -16,6 +17,10 @@ struct map_query {
     __u32 sectors_capacity;
     __u64 sectors_ptr;
     __u64 response_ptr;
+};
+
+struct info_response {
+    __u32 file_count;
 };
 
 struct map_response {
@@ -39,5 +44,6 @@ struct metadata_entry {
 #define SIMPLEFS_IOCTL_ERASE _IO(SIMPLEFS_IOCTL_MAGIC, 2)
 #define SIMPLEFS_IOCTL_METADATA _IOWR(SIMPLEFS_IOCTL_MAGIC, 3, struct metadata_query)
 #define SIMPLEFS_IOCTL_MAP _IOWR(SIMPLEFS_IOCTL_MAGIC, 4, struct map_query)
+#define SIMPLEFS_IOCTL_INFO _IOR(SIMPLEFS_IOCTL_MAGIC, 5, struct info_response)
 
 #endif

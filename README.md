@@ -25,7 +25,7 @@ echo "$DEVICE"
 sudo insmod simplefs.ko device_name="$DEVICE" \
     sb_main_sector=0 \
     sb_backup_sector=1024 \
-    max_name_len=64 \
+    max_filename_len=64 \
     max_file_sectors=16
 ```
 

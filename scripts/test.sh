@@ -37,7 +37,7 @@ if [ ! -d "$MOUNT_POINT" ]; then
 fi
 
 echo "Loading KERNEL module"
-sudo insmod "$MODULE_PATH" device_name="$DEVICE" sb_main_sector=0 sb_backup_sector=1024 max_name_len=64 max_file_sectors=16
+sudo insmod "$MODULE_PATH" device_name="$DEVICE" sb_main_sector=0 sb_backup_sector=1024 max_filename_len=64 max_file_sectors=16
 
 echo "Mounting module"
 sudo mount -t simplefs "$DEVICE" "$MOUNT_POINT"

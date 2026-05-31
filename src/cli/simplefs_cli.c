@@ -11,6 +11,8 @@
 
 #include "../include/simplefs_ioctl.h"
 
+#define BATCH_SIZE 1024
+
 void cli_usage(const char* name) {
     printf("Usage:\n");
     printf("  %s <mountpoint> zero - Zero all files\n", name);
@@ -62,28 +64,47 @@ int erase(const char *path) {
 int metadata(const char* path) {
     int fd = open_path(path);
     
-    struct metadata_entry entries[1024];
-    struct metadata_query query = {
-        .entries_ptr = (unsigned long long)entries,
-        .capacity = 1024,
-        .count = 0
-    };
-    
-    if (ioctl(fd, SIMPLEFS_IOCTL_METADATA, &query) < 0) {
-        perror("ioctl metadata failed");
+    struct info_response info = {0};
+    if (ioctl(fd, SIMPLEFS_IOCTL_INFO, &info) < 0) {
+        perror("ioctl info failed\n");
         close(fd);
         return 1;
     }
 
+    printf("Total file count: %u\n", info.file_count);
+    if (info.file_count == 0) {
+        printf("No files found\n");
+        close(fd);
+        return 0;
+    }
+
     printf("%-20s %12s %12s  %s\n", "NAME", "OFFSET", "SIZE", "CRC32");
-    for (unsigned i = 0; i < query.count; i++) {
-        printf(
-            "%-20s %12llu %12llu  0x%08x\n",
-            entries[i].name,
-            (unsigned long long)entries[i].offset,
-            (unsigned long long)entries[i].size,
-            entries[i].hash
-        );
+
+    struct metadata_entry entries[BATCH_SIZE];
+    for (unsigned offset = 0; offset < info.file_count; offset += BATCH_SIZE) {
+        
+        struct metadata_query query = {
+            .entries_ptr = (unsigned long long)entries,
+            .offset = offset,
+            .capacity = BATCH_SIZE,
+            .count = 0
+        };
+        
+        if (ioctl(fd, SIMPLEFS_IOCTL_METADATA, &query) < 0) {
+            perror("ioctl metadata failed\n");
+            close(fd);
+            return 1;
+        }
+
+        for (unsigned i = 0; i < query.count; i++) {
+            printf(
+                "%-20s %12llu %12llu  0x%08x\n",
+                entries[i].name,
+                (unsigned long long)entries[i].offset,
+                (unsigned long long)entries[i].size,
+                entries[i].hash
+            );
+        }
     }
     
     close(fd);

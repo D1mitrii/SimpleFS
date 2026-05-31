@@ -73,7 +73,16 @@ static int metadata_ioctl(struct super_block *sb, void __user *argp)
     if (copy_from_user(&query, argp, sizeof(query)))
         return -EFAULT;
     
-    count = min(query.capacity, fsi->file_count);
+    if (query.offset >= fsi->file_count) {
+
+        query.count = 0;
+        if (copy_to_user(argp, &query, sizeof(query)))
+            return -EFAULT;
+
+        return 0;
+    }
+
+    count = min(query.capacity, fsi->file_count - query.offset);
     
     if (count > 0) {
         entries = kmalloc_array(count, sizeof(struct metadata_entry), GFP_KERNEL);
@@ -82,17 +91,18 @@ static int metadata_ioctl(struct super_block *sb, void __user *argp)
     }
     
     for (u32 i = 0; i < count; i++) {
+        u32 file_idx = query.offset + i;
         u32 crc;
         sector_t start_sector;
         
-        ret = compute_file_crc32(sb, i, &crc);
+        ret = compute_file_crc32(sb, file_idx, &crc);
         if (ret) {
             kfree(entries);
             return ret;
         }
         
         start_sector = get_file_sector(fsi, i, 0);
-        format_filename(fsi, i, entries[i].name, sizeof(entries[i].name));
+        format_filename(fsi, file_idx, entries[i].name, sizeof(entries[i].name));
         entries[i].offset = start_sector;
         entries[i].size = (u64)fsi->file_sectors * sb->s_blocksize;
         entries[i].hash = crc;
@@ -142,7 +152,6 @@ static int map_ioctl(struct super_block *sb, void __user *argp)
     
     sectors = kmalloc_array(response.length, sizeof(u64), GFP_KERNEL);
     if (!sectors) {
-        pr_err("SimpleFS: map_ioctl: kmalloc failed\n");
         return -ENOMEM;
     }
 
@@ -151,11 +160,23 @@ static int map_ioctl(struct super_block *sb, void __user *argp)
     }
     
     if (copy_to_user((void __user *)(unsigned long)query.sectors_ptr, sectors, response.length * sizeof(u64))) {
-            pr_err("SimpleFS: map_ioctl: copy_to_user sectors failed\n");
             kfree(sectors);
             return -EFAULT;
         }
     
+    return 0;
+}
+
+static int info_ioctl(struct super_block *sb, void __user *argp) {
+    struct simplefs_info* fsi = get_simplefs_info(sb);
+
+    struct info_response response = {
+        .file_count = fsi->file_count,
+    };
+
+    if (copy_to_user(argp, &response, sizeof(response)))
+        return -EFAULT;
+
     return 0;
 }
 
@@ -186,6 +207,9 @@ long ioctl_handler(struct file *file, unsigned int cmd, unsigned long arg)
         case SIMPLEFS_IOCTL_MAP:
             printk(KERN_INFO "SimpleFS: MAP\n");
             return map_ioctl(sb, argp);
+        case SIMPLEFS_IOCTL_INFO:
+            printk(KERN_INFO "SimpleFS: INFO\n");
+            return info_ioctl(sb, argp);
         default:
             printk(KERN_ERR "SimpleFS: unknown cmd=%u\n", cmd);
             return -ENOTTY;
